@@ -23,11 +23,11 @@ class CinderLineMirrorApp : public AppNative {
 	void update();
 	void draw();
     void initVBOS();
-    
+    void keyDown( KeyEvent event );
     CaptureRef			mCapture;
     gl::TextureRef		mTexture;
     gl::VboMeshRef		mLineVBOs[LINE_COUNT];
-    
+//    Font mFont;
     CameraPersp		mCamera;
 };
 
@@ -41,7 +41,10 @@ void CinderLineMirrorApp::setup()
     catch( ... ) {
         console() << "Failed to initialize capture" << std::endl;
     }
+//    mFont = Font( "Quicksand Book Regular", 12.0f );
     initVBOS();
+    hideCursor();
+    setFullScreen(true);
 }
 
 void CinderLineMirrorApp::initVBOS()
@@ -145,6 +148,21 @@ void CinderLineMirrorApp::draw()
             gl::draw( mLineVBOs[i] );
         }
         glPopMatrix();
+    }
+
+//    gl::drawString( "Framerate: " + to_string(getAverageFps()), Vec2f( 10.0f, 10.0f ), Color::white(), mFont );
+
+}
+
+void CinderLineMirrorApp::keyDown( KeyEvent event )
+{
+    if( event.getChar() == 'f' )
+    {
+        setFullScreen(!isFullScreen());
+    }
+    else if(event.getChar() == cinder::app::KeyEvent::KEY_ESCAPE)
+    {
+        exit(0);
     }
 }
 
