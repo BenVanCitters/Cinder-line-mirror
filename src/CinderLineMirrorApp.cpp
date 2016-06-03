@@ -9,6 +9,8 @@
 #include "cinder/gl/Vbo.h"
 #include "cinder/gl/Texture.h"
 
+#include "cinder/gl/Fbo.h"
+
 using namespace ci;
 using namespace ci::app;
 using namespace std;
@@ -22,6 +24,7 @@ class CinderLineMirrorApp : public AppNative {
 	void mouseDown( MouseEvent event );	
 	void update();
 	void draw();
+    void drawFBO();
     void initVBOS();
     void keyDown( KeyEvent event );
     CaptureRef			mCapture;
@@ -29,6 +32,10 @@ class CinderLineMirrorApp : public AppNative {
     gl::VboMeshRef		mLineVBOs[LINE_COUNT];
 //    Font mFont;
     CameraPersp		mCamera;
+    
+    //fbo shit
+    gl::Fbo				mFbo;
+    static const int	FBO_WIDTH = 256, FBO_HEIGHT = 256;
 };
 
 void CinderLineMirrorApp::setup()
@@ -41,7 +48,10 @@ void CinderLineMirrorApp::setup()
     catch( ... ) {
         console() << "Failed to initialize capture" << std::endl;
     }
+    gl::Fbo::Format format;
+    //	format.setSamples( 4 ); // uncomment this to enable 4x antialiasing
 //    mFont = Font( "Quicksand Book Regular", 12.0f );
+    mFbo = gl::Fbo( FBO_WIDTH, FBO_HEIGHT, format );
     initVBOS();
     hideCursor();
     setFullScreen(true);
@@ -126,8 +136,42 @@ void CinderLineMirrorApp::update()
     }
 }
 
+
+void CinderLineMirrorApp::drawFBO()
+{
+    gl::SaveFramebufferBinding bindingSaver;
+    
+    // bind the framebuffer - now everything we draw will go there
+    mFbo.bindFramebuffer();
+    //    Color c =Color( Rand().nextFloat(255),Rand().nextFloat(1),Rand().nextFloat(1) );
+    //    gl::clear( c );
+
+    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    gl::setMatricesWindow( getWindowWidth(), getWindowHeight() );
+    gl::lineWidth(.4);
+    //    if( mTexture )
+    {
+        glPushMatrix();
+        
+        //        gl::translate( Vec3f( getMousePos().x, getMousePos().y,0 ) );
+        //        gl::draw( mTexture );
+        for(int i = 0; i < LINE_COUNT; i++)
+        {
+            int colorIndex = i % 3;
+            if(colorIndex==0) gl::color(1, 0, 0);
+            if(colorIndex==1) gl::color(0, 1, 0);
+            if(colorIndex==2) gl::color(0, 0, 1);
+            gl::draw( mLineVBOs[i] );
+        }
+        glPopMatrix();
+    }
+    //    gl::drawString( "Framerate: " + to_string(getAverageFps()), Vec2f( 10.0f, 10.0f ), Color::white(), mFont );
+
+}
 void CinderLineMirrorApp::draw()
 {
+//    drawFBO();
+//    gl::draw( mFbo.getTexture(0), Rectf( 0, 0, 1920, 1080 ) );
 //    Color c =Color( Rand().nextFloat(255),Rand().nextFloat(1),Rand().nextFloat(1) );
 //    gl::clear( c );
     glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
