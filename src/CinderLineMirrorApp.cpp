@@ -15,7 +15,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace std;
 
-#define LINE_COUNT 300
+#define LINE_COUNT 400
 #define SEG_COUNT 500
 
 class CinderLineMirrorApp : public AppNative {
@@ -35,11 +35,12 @@ class CinderLineMirrorApp : public AppNative {
     
     //fbo shit
     gl::Fbo				mFbo;
-    static const int	FBO_WIDTH = 256, FBO_HEIGHT = 256;
+    static const int	FBO_WIDTH = 1920*2, FBO_HEIGHT = 1080*2;
 };
 
 void CinderLineMirrorApp::setup()
 {
+//    getRenderer()->setFrameSize(1920, 1080);
     //init the capture
     try {
         mCapture = Capture::create( 640, 480 );
@@ -49,9 +50,11 @@ void CinderLineMirrorApp::setup()
         console() << "Failed to initialize capture" << std::endl;
     }
     gl::Fbo::Format format;
-    //	format.setSamples( 4 ); // uncomment this to enable 4x antialiasing
-//    mFont = Font( "Quicksand Book Regular", 12.0f );
+    format.setSamples( 4 ); // uncomment this to enable 4x antialiasing
+    format.enableDepthBuffer(false);
     mFbo = gl::Fbo( FBO_WIDTH, FBO_HEIGHT, format );
+//    mFont = Font( "Quicksand Book Regular", 12.0f );
+
     initVBOS();
     hideCursor();
     setFullScreen(true);
@@ -61,21 +64,29 @@ void CinderLineMirrorApp::initVBOS()
 {
     gl::VboMesh::Layout layout;
     layout.setStaticIndices();
-//    layout.setStaticColorsRGB();
+    layout.setStaticColorsRGB();
     layout.setDynamicPositions();
     for(int j = 0; j < LINE_COUNT; j++)
     {
         mLineVBOs[j] = gl::VboMesh::create( SEG_COUNT, SEG_COUNT, layout, GL_LINE_STRIP );
         vector<uint32_t> indices;
         vector<Color> colors;
-
+        int colorIndex = j % 3;
+        Color c;
+        if(colorIndex==0)
+            c =Color(1, 0, 0);
+        else if(colorIndex==1)
+            c =Color(0, 1, 0);
+        else if(colorIndex==2)
+            c =Color(0, 0, 1);
+        
         for( int i = 0; i < SEG_COUNT; ++i )
         {
             indices.push_back( i );
-    //        colors.push_back(Color(Rand().nextFloat(1),Rand().nextFloat(1),Rand().nextFloat(1)));
+            colors.push_back(c);
         }
         mLineVBOs[j]->bufferIndices( indices );
-        //    mLineVBOs[0]->bufferColorsRGB( colors );
+        mLineVBOs[j]->bufferColorsRGB( colors );
     }
     
 }
@@ -96,8 +107,8 @@ void CinderLineMirrorApp::update()
         u_char* pix = mySurface.getData();
         
         float t = getElapsedSeconds();
-        int windW = getWindowWidth();
-        int windH = getWindowHeight();
+        int windW = FBO_WIDTH;//getWindowWidth();
+        int windH = FBO_HEIGHT;//getWindowHeight();
         
         float lineMaxAmp = 6.f;
         float maxLineFreq =2.7;
@@ -132,70 +143,52 @@ void CinderLineMirrorApp::update()
                 ++iter;
             }
         }
-        mTexture = gl::Texture::create( mCapture->getSurface() );
+//        mTexture = gl::Texture::create( mCapture->getSurface() );
     }
+    
 }
 
 
 void CinderLineMirrorApp::drawFBO()
 {
-    gl::SaveFramebufferBinding bindingSaver;
+    //save (and eventually restore) the current fbo binding.
+//    gl::SaveFramebufferBinding bindingSaver;
     
     // bind the framebuffer - now everything we draw will go there
-    mFbo.bindFramebuffer();
-    //    Color c =Color( Rand().nextFloat(255),Rand().nextFloat(1),Rand().nextFloat(1) );
-    //    gl::clear( c );
-
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
-    gl::setMatricesWindow( getWindowWidth(), getWindowHeight() );
+//    mFbo.bindFramebuffer();
+//        Color c =Color( Rand().nextFloat(255),Rand().nextFloat(1),Rand().nextFloat(1) );
+//        gl::clear( c );
+    gl::clear();
+//    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    gl::setMatricesWindow( FBO_WIDTH, FBO_HEIGHT );
     gl::lineWidth(.4);
+    
+//  Vec2i v(0,getWindowHeight()*2);
+    
     //    if( mTexture )
     {
         glPushMatrix();
-        
+//        gl::translate(v);
+//        gl::scale(1,-1);
         //        gl::translate( Vec3f( getMousePos().x, getMousePos().y,0 ) );
         //        gl::draw( mTexture );
         for(int i = 0; i < LINE_COUNT; i++)
         {
-            int colorIndex = i % 3;
-            if(colorIndex==0) gl::color(1, 0, 0);
-            if(colorIndex==1) gl::color(0, 1, 0);
-            if(colorIndex==2) gl::color(0, 0, 1);
             gl::draw( mLineVBOs[i] );
         }
         glPopMatrix();
     }
+//    mFbo.unbindFramebuffer();
     //    gl::drawString( "Framerate: " + to_string(getAverageFps()), Vec2f( 10.0f, 10.0f ), Color::white(), mFont );
 
 }
 void CinderLineMirrorApp::draw()
 {
-//    drawFBO();
-//    gl::draw( mFbo.getTexture(0), Rectf( 0, 0, 1920, 1080 ) );
-//    Color c =Color( Rand().nextFloat(255),Rand().nextFloat(1),Rand().nextFloat(1) );
-//    gl::clear( c );
-    glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
+    drawFBO();
+//    gl::clear(Color(0,0,0 ));
     gl::setMatricesWindow( getWindowWidth(), getWindowHeight() );
-    gl::lineWidth(.4);
-//    if( mTexture )
-    {
-        glPushMatrix();
-        
-//        gl::translate( Vec3f( getMousePos().x, getMousePos().y,0 ) );
-//        gl::draw( mTexture );
-        for(int i = 0; i < LINE_COUNT; i++)
-        {
-            int colorIndex = i % 3;
-            if(colorIndex==0) gl::color(1, 0, 0);
-            if(colorIndex==1) gl::color(0, 1, 0);
-            if(colorIndex==2) gl::color(0, 0, 1);
-            gl::draw( mLineVBOs[i] );
-        }
-        glPopMatrix();
-    }
-
-//    gl::drawString( "Framerate: " + to_string(getAverageFps()), Vec2f( 10.0f, 10.0f ), Color::white(), mFont );
-
+    
+//    gl::draw( mFbo.getTexture(0), Rectf(0, 0, 2*getWindowWidth(), 2*getWindowHeight() ) );
 }
 
 void CinderLineMirrorApp::keyDown( KeyEvent event )
@@ -203,6 +196,10 @@ void CinderLineMirrorApp::keyDown( KeyEvent event )
     if( event.getChar() == 'f' )
     {
         setFullScreen(!isFullScreen());
+        if(isFullScreen())
+            hideCursor();
+        else
+            showCursor();
     }
     else if(event.getChar() == cinder::app::KeyEvent::KEY_ESCAPE)
     {
